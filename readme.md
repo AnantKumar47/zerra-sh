@@ -49,7 +49,7 @@ cd SUSTAINABILITY-ANALYSIS-PLATFORM
 **Navigate to the server directory and install dependencies:**  
 ```bash
 cd server
-pip install fastapi uvicorn pandas numpy catboost google-cloud-aiplatform requests python-dotenv
+pip install fastapi uvicorn pandas numpy catboost google-cloud-aiplatform requests python-dotenv catboost
 ```
 
 **Create a `.env` file in the server directory with your configuration:**  
