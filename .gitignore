@@ -1,0 +1,33 @@
+# Node.js
+client/node_modules/
+server/node_modules/
+npm-debug.log*
+yarn-error.log*
+
+# Environment files
+.env
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
+client/.env
+server/.env
+
+# Client build artifacts
+client/build/
+
+# Server build artifacts
+server/build/
+server/__pycache__/
+server/catboost_info/
+
+# Python cache
+*.pyc
+__pycache__/
+
+# Logs
+*.log
+
+# OS-generated files
+.DS_Store
+Thumbs.db
