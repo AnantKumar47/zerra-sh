@@ -5,17 +5,50 @@ function Result() {
   const location = useLocation();
   const navigate = useNavigate();
   const data = location.state?.data;
+  const selectedArea = location.state?.selectedArea || {};
 
   if (!data) {
     return (
-      <div className="min-h-screen bg-gray-100 flex items-center justify-center">
-        <p className="text-red-500 text-lg">No data available. Please try again.</p>
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="cosmic-background"></div>
+        <div className="cosmic-effects"></div>
+        <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md p-8 rounded-lg shadow-2xl border border-[#2d1b4e] max-w-md mx-auto">
+          <p className="text-red-400 text-lg">No data available. Please try again.</p>
+          <button
+            onClick={() => navigate('/')}
+            className="mt-4 bg-[#7c3aed] text-white py-2 px-6 rounded-md hover:bg-[#6d28d9] transition duration-200"
+          >
+            Back to Map
+          </button>
+        </div>
       </div>
     );
   }
 
-  const { report, recommendations } = data;
-
+  const { report, recommendations, place_name } = data;
+  
+  // Safely extract coordinates from navigation state first, then from API response
+  let coords = {
+    latitude: null,
+    longitude: null
+  };
+  
+  // Try to get coordinates from different possible locations, prioritizing the selected coordinates
+  if (selectedArea?.latitude !== undefined && selectedArea?.longitude !== undefined) {
+    coords = selectedArea;
+  } else if (data.coordinates?.latitude !== undefined && data.coordinates?.longitude !== undefined) {
+    coords = data.coordinates;
+  } else if (report?.latitude !== undefined && report?.longitude !== undefined) {
+    coords = {
+      latitude: report.latitude,
+      longitude: report.longitude
+    };
+  } else if (data.latitude !== undefined && data.longitude !== undefined) {
+    coords = {
+      latitude: data.latitude,
+      longitude: data.longitude
+    };
+  }
 
   // Parse recommendations into sections
   const parseRecommendations = (text) => {
@@ -54,139 +87,233 @@ function Result() {
     return sections;
   };
 
-  const recommendationSections = parseRecommendations(recommendations);
+  const recommendationSections = parseRecommendations(recommendations || '');
+
+  // Format place name or use coordinates as fallback
+  const displayPlace = selectedArea?.placeName || place_name || "Selected Area";
+  
+  // Safely format coordinates with fallbacks
+  const displayCoordinates = (coords.latitude !== null && coords.longitude !== null) ? 
+    `[${Number(coords.latitude).toFixed(4)}, ${Number(coords.longitude).toFixed(4)}]` : 
+    '';
 
   return (
-    <div className="min-h-screen bg-gray-100 py-8 px-4">
-      <div className="max-w-5xl mx-auto">
-        <h1 className="text-4xl font-bold text-green-700 text-center mb-8">
-          Sustainability Analysis Report
-        </h1>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
-          {/* Solar Potential */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold text-green-600 mb-4">Solar Potential</h2>
-            <div className="space-y-2">
-              <p className="text-gray-700">
-                <span className="font-medium">Average Radiation:</span>{' '}
-                {report.solar_potential.average_radiation} kWh/m²/day
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Result:</span> {report.solar_potential.result}
-              </p>
-            </div>
-          </div>
+    <>
+      {/* Fixed background */}
+      <div className="cosmic-background"></div>
+      <div className="cosmic-effects"></div>
 
-          {/* Afforestation Feasibility */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold text-green-600 mb-4">Afforestation Feasibility</h2>
-            <div className="space-y-2">
-              <p className="text-gray-700">
-                <span className="font-medium">Green Cover:</span>{' '}
-                {report.afforestation_feasibility.green_cover_percent}%
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Barren Land:</span>{' '}
-                {report.afforestation_feasibility.barren_land_percent}%
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Afforestation Potential:</span>{' '}
-                {report.afforestation_feasibility.afforestation_potential_percent}%
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Feasibility:</span>{' '}
-                {report.afforestation_feasibility.feasibility}
-              </p>
-            </div>
-          </div>
-
-          {/* Water Harvesting */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold text-green-600 mb-4">Water Harvesting</h2>
-            <div className="space-y-2">
-              <p className="text-gray-700">
-                <span className="font-medium">Rainfall Score:</span>{' '}
-                {report.water_harvesting.rainfall_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Soil Score:</span> {report.water_harvesting.soil_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Slope Score:</span> {report.water_harvesting.slope_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Water Harvesting Score:</span>{' '}
-                {report.water_harvesting.water_harvesting_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Feasibility:</span>{' '}
-                {report.water_harvesting.feasibility}
-              </p>
-            </div>
-          </div>
-
-          {/* Windmill Feasibility */}
-          <div className="bg-white rounded-lg shadow-lg p-6">
-            <h2 className="text-2xl font-semibold text-green-600 mb-4">Windmill Feasibility</h2>
-            <div className="space-y-2">
-              <p className="text-gray-700">
-                <span className="font-medium">Wind Score:</span>{' '}
-                {report.windmill_feasibility.wind_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Slope Score:</span>{' '}
-                {report.windmill_feasibility.slope_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Land Score:</span>{' '}
-                {report.windmill_feasibility.land_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Windmill Feasibility Score:</span>{' '}
-                {report.windmill_feasibility.windmill_feasibility_score}
-              </p>
-              <p className="text-gray-700">
-                <span className="font-medium">Feasibility:</span>{' '}
-                {report.windmill_feasibility.feasibility}
-              </p>
-            </div>
-          </div>
-        </div>
-
-        {/* Recommendations */}
-        <div className="bg-white rounded-lg shadow-lg p-6">
-          <h2 className="text-2xl font-semibold text-green-600 mb-4">
-            AI Recommendations
-          </h2>
-          {recommendationSections.length > 0 ? (
-            <div className="space-y-6">
-              {recommendationSections.map((section, index) => (
-                <div key={index}>
-                  <h3 className="text-xl font-medium text-gray-800 mb-2">{section.title}</h3>
-                  <ul className="list-disc pl-5 space-y-2 text-gray-700">
-                    {section.items.map((item, itemIndex) => (
-                      <li key={itemIndex}>{item}</li>
-                    ))}
-                  </ul>
+      {/* Content that scrolls over the fixed background */}
+      <div className="snap-container">
+        <div className="min-h-screen pt-16 pb-16 px-4">
+          <div className="max-w-6xl mx-auto">
+            {/* Header section */}
+            <div className="text-center mb-12">
+              <h1 
+                className="font-light mb-6 leading-tight glow-subtle"
+                style={{ 
+                  fontFamily: 'Google Sans, sans-serif', 
+                  fontSize: '40px',
+                  color: 'white',
+                  letterSpacing: '0.01em'
+                }}
+              >
+                Sustainability Analysis Report
+              </h1>
+              <div className="flex flex-col items-center gap-y-2">
+                <div className="flex items-center gap-x-3">
+                  <span className="text-gray-400">Selected Area:</span>
+                  <span className="text-white text-xl">{displayPlace}</span>
                 </div>
-              ))}
+                {displayCoordinates && (
+                  <div className="text-lg text-gray-300">
+                    Coordinates: {displayCoordinates}
+                  </div>
+                )}
+              </div>
             </div>
-          ) : (
-            <p className="text-gray-500">No recommendations available.</p>
-          )}
-        </div>
 
-        {/* Back Button */}
-        <div className="mt-8 text-center">
-          <button
-            onClick={() => navigate('/')}
-            className="bg-green-600 text-white py-2 px-6 rounded-md hover:bg-green-700 transition duration-200"
-          >
-            Back to Map
-          </button>
+            {/* Analysis cards grid */}
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
+              {/* Solar Potential */}
+              <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md rounded-lg shadow-lg p-6 border border-[#2d1b4e] transition-all hover:shadow-xl">
+                <h2 className="text-2xl font-light text-white mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-[#7c3aed]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z" />
+                  </svg>
+                  Solar Potential
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Average Radiation</span>
+                    <span className="text-white font-medium">{report?.solar_potential?.average_radiation || 'N/A'} kWh/m²/day</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Result</span>
+                    <span className={`font-medium ${
+                      report?.solar_potential?.result?.includes('High') ? 'text-green-400' : 
+                      report?.solar_potential?.result?.includes('Medium') ? 'text-yellow-400' : 
+                      'text-red-400'
+                    }`}>
+                      {report?.solar_potential?.result || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Afforestation Feasibility */}
+              <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md rounded-lg shadow-lg p-6 border border-[#2d1b4e] transition-all hover:shadow-xl">
+                <h2 className="text-2xl font-light text-white mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-[#7c3aed]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z" />
+                  </svg>
+                  Afforestation Feasibility
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Green Cover</span>
+                    <span className="text-white font-medium">{report?.afforestation_feasibility?.green_cover_percent || 'N/A'}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Barren Land</span>
+                    <span className="text-white font-medium">{report?.afforestation_feasibility?.barren_land_percent || 'N/A'}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Afforestation Potential</span>
+                    <span className="text-white font-medium">{report?.afforestation_feasibility?.afforestation_potential_percent || 'N/A'}%</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Feasibility</span>
+                    <span className={`font-medium ${
+                      report?.afforestation_feasibility?.feasibility?.includes('High') ? 'text-green-400' : 
+                      report?.afforestation_feasibility?.feasibility?.includes('Medium') ? 'text-yellow-400' : 
+                      'text-red-400'
+                    }`}>
+                      {report?.afforestation_feasibility?.feasibility || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Water Harvesting */}
+              <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md rounded-lg shadow-lg p-6 border border-[#2d1b4e] transition-all hover:shadow-xl">
+                <h2 className="text-2xl font-light text-white mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-[#7c3aed]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19.428 15.428a2 2 0 00-1.022-.547l-2.387-.477a6 6 0 00-3.86.517l-.318.158a6 6 0 01-3.86.517L6.05 15.21a2 2 0 00-1.806.547M8 4h8l-1 1v5.172a2 2 0 00.586 1.414l5 5c1.26 1.26.367 3.414-1.415 3.414H4.828c-1.782 0-2.674-2.154-1.414-3.414l5-5A2 2 0 009 10.172V5L8 4z" />
+                  </svg>
+                  Water Harvesting
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Rainfall Score</span>
+                    <span className="text-white font-medium">{report?.water_harvesting?.rainfall_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Soil Score</span>
+                    <span className="text-white font-medium">{report?.water_harvesting?.soil_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Slope Score</span>
+                    <span className="text-white font-medium">{report?.water_harvesting?.slope_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Water Harvesting Score</span>
+                    <span className="text-white font-medium">{report?.water_harvesting?.water_harvesting_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Feasibility</span>
+                    <span className={`font-medium ${
+                      report?.water_harvesting?.feasibility?.includes('High') ? 'text-green-400' : 
+                      report?.water_harvesting?.feasibility?.includes('Medium') ? 'text-yellow-400' : 
+                      'text-red-400'
+                    }`}>
+                      {report?.water_harvesting?.feasibility || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Windmill Feasibility */}
+              <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md rounded-lg shadow-lg p-6 border border-[#2d1b4e] transition-all hover:shadow-xl">
+                <h2 className="text-2xl font-light text-white mb-4 flex items-center">
+                  <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-[#7c3aed]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M14 10l-2 1m0 0l-2-1m2 1v2.5M20 7l-2 1m2-1l-2-1m2 1v2.5M14 4l-2-1-2 1M4 7l2-1M4 7l2 1M4 7v2.5M12 21l-2-1m2 1l2-1m-2 1v-2.5M6 18l-2-1v-2.5M18 18l2-1v-2.5" />
+                  </svg>
+                  Windmill Feasibility
+                </h2>
+                <div className="space-y-3">
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Wind Score</span>
+                    <span className="text-white font-medium">{report?.windmill_feasibility?.wind_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Slope Score</span>
+                    <span className="text-white font-medium">{report?.windmill_feasibility?.slope_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Land Score</span>
+                    <span className="text-white font-medium">{report?.windmill_feasibility?.land_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Windmill Feasibility Score</span>
+                    <span className="text-white font-medium">{report?.windmill_feasibility?.windmill_feasibility_score || 'N/A'}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-gray-400">Feasibility</span>
+                    <span className={`font-medium ${
+                      report?.windmill_feasibility?.feasibility?.includes('High') ? 'text-green-400' : 
+                      report?.windmill_feasibility?.feasibility?.includes('Medium') ? 'text-yellow-400' : 
+                      'text-red-400'
+                    }`}>
+                      {report?.windmill_feasibility?.feasibility || 'N/A'}
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Recommendations */}
+            <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md rounded-lg shadow-lg p-6 border border-[#2d1b4e] transition-all hover:shadow-xl mb-8">
+              <h2 className="text-2xl font-light text-white mb-6 flex items-center">
+                <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6 mr-2 text-[#7c3aed]" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                </svg>
+                AI Recommendations
+              </h2>
+              {recommendationSections.length > 0 ? (
+                <div className="space-y-6">
+                  {recommendationSections.map((section, index) => (
+                    <div key={index} className="bg-[#170821] bg-opacity-60 p-4 rounded-lg">
+                      <h3 className="text-xl font-medium text-[#a78bfa] mb-3">{section.title}</h3>
+                      <ul className="space-y-2 text-gray-300">
+                        {section.items.map((item, itemIndex) => (
+                          <li key={itemIndex} className="flex items-start">
+                            <span className="text-[#7c3aed] mr-2 mt-1">•</span>
+                            <span>{item}</span>
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <p className="text-gray-400">No recommendations available.</p>
+              )}
+            </div>
+
+            {/* Back Button */}
+            <div className="text-center">
+              <button
+                onClick={() => navigate('/')}
+                className="bg-[#7c3aed] text-white py-3 px-8 rounded-md hover:bg-[#6d28d9] transition-all duration-200 shadow-lg hover:shadow-xl"
+              >
+                Back to Map
+              </button>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
+    </>
   );
 }
 
