@@ -1,5 +1,16 @@
 import React from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+import { MapContainer, TileLayer, Marker } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix default marker icon issue with Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+  iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+  iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+  shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 function Result() {
   const location = useLocation();
@@ -97,6 +108,11 @@ function Result() {
     `[${Number(coords.latitude).toFixed(4)}, ${Number(coords.longitude).toFixed(4)}]` : 
     '';
 
+  // Map coordinates for Leaflet (ensure numbers and in correct order: [lat, lng])
+  const mapPosition = (coords.latitude !== null && coords.longitude !== null) ? 
+    [Number(coords.latitude), Number(coords.longitude)] : 
+    [0, 0]; // Default to [0,0] if no coordinates are available
+
   return (
     <>
       {/* Fixed background */}
@@ -108,7 +124,7 @@ function Result() {
         <div className="min-h-screen pt-16 pb-16 px-4">
           <div className="max-w-6xl mx-auto">
             {/* Header section */}
-            <div className="text-center mb-12">
+            <div className="text-center mb-6">
               <h1 
                 className="font-light mb-6 leading-tight glow-subtle"
                 style={{ 
@@ -132,6 +148,30 @@ function Result() {
                 )}
               </div>
             </div>
+            
+            {/* Static map showing the selected area */}
+            {coords.latitude !== null && coords.longitude !== null && (
+              <div className="mb-8 flex justify-center">
+                <div className="bg-[#0f0617] bg-opacity-90 backdrop-blur-md rounded-lg shadow-lg p-4 border border-[#2d1b4e] w-full max-w-3xl">
+                  <MapContainer
+                    center={mapPosition}
+                    zoom={13}
+                    style={{ height: '300px', width: '100%', borderRadius: '0.5rem' }}
+                    dragging={false}
+                    scrollWheelZoom={false}
+                    touchZoom={false}
+                    doubleClickZoom={false}
+                    zoomControl={false}
+                    attributionControl={false}
+                  >
+                    <TileLayer
+                      url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+                    />
+                    <Marker position={mapPosition} />
+                  </MapContainer>
+                </div>
+              </div>
+            )}
 
             {/* Analysis cards grid */}
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-10">
