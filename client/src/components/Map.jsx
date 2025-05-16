@@ -43,6 +43,7 @@ function Map() {
   const [searchInput, setSearchInput] = useState('');
   const [suggestions, setSuggestions] = useState([]);
   const [searchLoading, setSearchLoading] = useState(false);
+  const [selectedPlaceName, setSelectedPlaceName] = useState('');
   const navigate = useNavigate();
   const mapRef = useRef(null);
   const searchTimeoutRef = useRef(null);
@@ -125,6 +126,7 @@ function Map() {
 
   const handleSuggestionClick = (suggestion) => {
     setSearchInput(suggestion.name);
+    setSelectedPlaceName(suggestion.name);
     setSuggestions([]);
     
     // Update map position based on the selected place
@@ -156,7 +158,21 @@ function Map() {
         { latitude: lat, longitude: lng },
         { headers: { 'Content-Type': 'application/json' } }
       );
-      navigate('/result', { state: { data: response.data } });
+      
+      // Create a selected area object to pass with navigation state
+      const selectedArea = {
+        latitude: lat,
+        longitude: lng,
+        placeName: selectedPlaceName || searchInput || 'Selected Location'
+      };
+      
+      // Navigate to the result page with both API response data and selected area info
+      navigate('/result', { 
+        state: { 
+          data: response.data,
+          selectedArea: selectedArea
+        } 
+      });
     } catch (err) {
       setError(err.response?.data?.detail || 'Failed to fetch sustainability report.');
       setLoading(false);
@@ -168,7 +184,8 @@ function Map() {
     setLatitude(newPosition[0].toFixed(4));
     setLongitude(newPosition[1].toFixed(4));
     
-    // Clear search input when clicking on map
+    // Clear place name when clicking directly on the map
+    setSelectedPlaceName('');
     setSearchInput('');
   };
 
