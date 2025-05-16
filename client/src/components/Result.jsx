@@ -1,8 +1,9 @@
-import React from 'react';
+import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { MapContainer, TileLayer, Marker } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
+import axios from 'axios';
 
 // Fix default marker icon issue with Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -17,6 +18,115 @@ function Result() {
   const navigate = useNavigate();
   const data = location.state?.data;
   const selectedArea = location.state?.selectedArea || {};
+  const [locationName, setLocationName] = useState('');
+  const [nameLoading, setNameLoading] = useState(false);
+
+  // Safely extract coordinates from navigation state first, then from API response
+  let coords = {
+    latitude: null,
+    longitude: null
+  };
+  
+  if (data) {
+    const { report } = data;
+    
+    // Try to get coordinates from different possible locations, prioritizing the selected coordinates
+    if (selectedArea?.latitude !== undefined && selectedArea?.longitude !== undefined) {
+      coords = selectedArea;
+    } else if (data.coordinates?.latitude !== undefined && data.coordinates?.longitude !== undefined) {
+      coords = data.coordinates;
+    } else if (report?.latitude !== undefined && report?.longitude !== undefined) {
+      coords = {
+        latitude: report.latitude,
+        longitude: report.longitude
+      };
+    } else if (data.latitude !== undefined && data.longitude !== undefined) {
+      coords = {
+        latitude: data.latitude,
+        longitude: data.longitude
+      };
+    }
+  }
+  
+  // Function to perform reverse geocoding
+  const getLocationNameFromCoordinates = async (lat, lng) => {
+    if (!lat || !lng) return;
+    
+    setNameLoading(true);
+    try {
+      // Using OpenStreetMap Nominatim API for reverse geocoding
+      const response = await axios.get(
+        `https://nominatim.openstreetmap.org/reverse`,
+        {
+          params: {
+            lat: lat,
+            lon: lng,
+            format: 'json',
+            zoom: 14, // Higher zoom level means more detailed address
+            addressdetails: 1
+          },
+          headers: {
+            'User-Agent': 'ZerraSustainabilityAnalysis'
+          }
+        }
+      );
+      
+      if (response.data) {
+        // Extract relevant location info
+        const address = response.data.address;
+        let placeName = '';
+        
+        // Try to build a readable location name from address components
+        if (address.neighbourhood) {
+          placeName = address.neighbourhood;
+        } else if (address.suburb) {
+          placeName = address.suburb;
+        } else if (address.town) {
+          placeName = address.town;
+        } else if (address.city) {
+          placeName = address.city;
+        } else if (address.county) {
+          placeName = address.county;
+        } else if (address.state) {
+          placeName = address.state;
+        }
+        
+        // Add city/state context if available
+        if (placeName && address.city && placeName !== address.city) {
+          placeName += `, ${address.city}`;
+        } else if (placeName && address.state && placeName !== address.state) {
+          placeName += `, ${address.state}`;
+        }
+        
+        // If we couldn't extract a good name, use the display name
+        if (!placeName && response.data.display_name) {
+          // Take just the first part of the display name (usually the most specific)
+          placeName = response.data.display_name.split(',')[0];
+        }
+        
+        if (placeName) {
+          setLocationName(placeName);
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching location name:', error);
+    } finally {
+      setNameLoading(false);
+    }
+  };
+  
+  // Trigger reverse geocoding when component mounts if needed
+  useEffect(() => {
+    // Only do reverse geocoding if we have coordinates but no specific place name
+    if (!data) return;
+    
+    const existingName = selectedArea?.placeName || data.place_name;
+    if (!existingName || existingName === 'Selected Location') {
+      if (coords.latitude && coords.longitude) {
+        getLocationNameFromCoordinates(coords.latitude, coords.longitude);
+      }
+    }
+  }, [coords.latitude, coords.longitude, selectedArea?.placeName, data]);
 
   if (!data) {
     return (
@@ -37,29 +147,6 @@ function Result() {
   }
 
   const { report, recommendations, place_name } = data;
-  
-  // Safely extract coordinates from navigation state first, then from API response
-  let coords = {
-    latitude: null,
-    longitude: null
-  };
-  
-  // Try to get coordinates from different possible locations, prioritizing the selected coordinates
-  if (selectedArea?.latitude !== undefined && selectedArea?.longitude !== undefined) {
-    coords = selectedArea;
-  } else if (data.coordinates?.latitude !== undefined && data.coordinates?.longitude !== undefined) {
-    coords = data.coordinates;
-  } else if (report?.latitude !== undefined && report?.longitude !== undefined) {
-    coords = {
-      latitude: report.latitude,
-      longitude: report.longitude
-    };
-  } else if (data.latitude !== undefined && data.longitude !== undefined) {
-    coords = {
-      latitude: data.latitude,
-      longitude: data.longitude
-    };
-  }
 
   // Parse recommendations into sections
   const parseRecommendations = (text) => {
@@ -100,8 +187,11 @@ function Result() {
 
   const recommendationSections = parseRecommendations(recommendations || '');
 
-  // Format place name or use coordinates as fallback
-  const displayPlace = selectedArea?.placeName || place_name || "Selected Area";
+  // Format place name, using fetched location name as a fallback
+  const fallbackName = locationName || "Selected Location";
+  const displayPlace = selectedArea?.placeName && selectedArea.placeName !== 'Selected Location' 
+    ? selectedArea.placeName 
+    : (place_name || fallbackName);
   
   // Safely format coordinates with fallbacks
   const displayCoordinates = (coords.latitude !== null && coords.longitude !== null) ? 
@@ -139,7 +229,14 @@ function Result() {
               <div className="flex flex-col items-center gap-y-2">
                 <div className="flex items-center gap-x-3">
                   <span className="text-gray-400">Selected Area:</span>
-                  <span className="text-white text-xl">{displayPlace}</span>
+                  <span className="text-white text-xl">
+                    {nameLoading ? (
+                      <span className="flex items-center">
+                        <div className="h-4 w-4 mr-2 border-2 border-[#7c3aed] border-t-transparent rounded-full animate-spin"></div>
+                        Fetching location...
+                      </span>
+                    ) : displayPlace}
+                  </span>
                 </div>
                 {displayCoordinates && (
                   <div className="text-lg text-gray-300">
